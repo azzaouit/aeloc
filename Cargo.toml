@@ -1,7 +1,7 @@
 [package]
 name = "aeloc"
 description = "A spatial data oracle for the EVM"
-repository = "https://github.com/azaouit/aeloc"
+repository = "https://github.com/azzaouit/aeloc"
 version = "0.1.0"
 edition = "2021"
 license = "MIT"
@@ -21,3 +21,6 @@ reqwest = {version = "0.12.2", features = ["json"]}
 serde = {version="1.0.197", features=["derive"]}
 serde-aux = "4.5.0"
 serde_json = "1.0.115"
+sqlx = { version = "0.7", features = [ "runtime-tokio", "sqlite"] }
+rpassword = "7.3.1"
+eyre = "0.6.12"

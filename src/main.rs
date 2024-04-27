@@ -1,32 +1,56 @@
-use aeloc::server;
+use aeloc::{db::DbManager, keystore::KeyStore, server};
 use clap::{Parser, Subcommand};
+use ethers::core::types::Address;
+use log::info;
 use std::env;
+use tokio::task::JoinSet;
 
 #[derive(Parser, Clone)]
 #[clap(version)]
 struct Args {
-    #[clap(short, long, env)]
-    wss_uri: String,
-
-    #[clap(short, long, env)]
-    nominatim_uri: String,
-
-    #[clap(short, long, env)]
-    overpass_uri: String,
-
-    #[clap(short, long, env)]
-    key: String,
-
-    #[clap(short, long, env)]
-    dispatcher: String,
-
     #[command(subcommand)]
     cmd: Commands,
 }
 
 #[derive(Subcommand, Clone)]
 enum Commands {
-    Serve,
+    Serve {
+        #[clap(short, long, env)]
+        wss_uri: String,
+
+        #[clap(short, long, env)]
+        nominatim_uri: String,
+
+        #[clap(short, long, env)]
+        overpass_uri: String,
+    },
+    Auth {
+        #[command(subcommand)]
+        cmd: AuthCommands,
+    },
+    Account {
+        #[command(subcommand)]
+        cmd: AccountCommands,
+    },
+}
+
+#[derive(Subcommand, Clone)]
+enum AuthCommands {
+    List,
+    New {
+        #[clap(value_name = "CONTRACT")]
+        contract: String,
+    },
+    Remove {
+        #[clap(value_name = "CONTRACT")]
+        contract: String,
+    },
+}
+
+#[derive(Subcommand, Clone)]
+enum AccountCommands {
+    New,
+    List,
 }
 
 #[tokio::main]
@@ -38,8 +62,76 @@ async fn main() {
 
     let args = Args::parse();
     match args.cmd {
-        Commands::Serve => {
-            server::serve(args.wss_uri, args.dispatcher, args.key).await;
+        Commands::Serve {
+            wss_uri,
+            nominatim_uri,
+            overpass_uri,
+        } => {
+            let d = DbManager::new().await.expect("Database connection error");
+            let auth = d
+                .authorized_contracts()
+                .await
+                .expect("Authorized contracts error");
+            if auth.is_empty() {
+                std::process::exit(1);
+            }
+
+            let password = rpassword::prompt_password("Key Store Password: ").unwrap();
+            let ks = KeyStore::open(&password).expect("Key store error");
+
+            let mut set = JoinSet::new();
+            for a in auth {
+                set.spawn(server::serve(
+                    wss_uri.to_owned(),
+                    nominatim_uri.to_owned(),
+                    overpass_uri.to_owned(),
+                    a.to_owned(),
+                    ks.wallet.to_owned(),
+                ));
+                info!("Spawned task for authorized contract: {}", hex::encode(a));
+            }
+
+            while let Some(res) = set.join_next().await {
+                res.expect("Task join error").unwrap();
+            }
         }
+        Commands::Auth { cmd } => match cmd {
+            AuthCommands::New { contract } => {
+                let a = contract
+                    .parse::<Address>()
+                    .expect("Invalid contract address");
+                let d = DbManager::new().await.expect("Database connection error");
+                d.authorize_contract(a)
+                    .await
+                    .expect("Contract authorization error");
+            }
+            AuthCommands::Remove { contract } => {
+                let a = contract
+                    .parse::<Address>()
+                    .expect("Invalid contract address");
+                let d = DbManager::new().await.expect("Database connection error");
+                d.remove_contract(a).await.expect("Contract removal error");
+            }
+            AuthCommands::List => {
+                let d = DbManager::new().await.expect("Database connection error");
+                let auth = d
+                    .authorized_contracts()
+                    .await
+                    .expect("Authorized contracts error");
+                for a in auth {
+                    println!("{}", hex::encode(a));
+                }
+            }
+        },
+        Commands::Account { cmd } => match cmd {
+            AccountCommands::New => {
+                let password = rpassword::prompt_password("Key Store Password: ").unwrap();
+                KeyStore::create(&password).expect("Key store create error");
+            }
+            AccountCommands::List => {
+                let password = rpassword::prompt_password("Key Store Password: ").unwrap();
+                KeyStore::open(&password).expect("Key store open error");
+            }
+        },
     }
 }

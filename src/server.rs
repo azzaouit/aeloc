@@ -4,6 +4,7 @@ use ethers::{
     core::types::{Address, U256},
     providers::Provider,
 };
+use eyre::Result;
 use hex;
 use log::info;
 use std::sync::Arc;
@@ -13,70 +14,71 @@ const COORDINATE_MULTIPLIER: f64 = 1e8_f64;
 
 abigen!(AelocDispatcher, "contracts/AelocDispatcher.json");
 
-pub async fn serve(provider: String, dispatcher: String, key: String) {
-    let dispatcher = dispatcher
-        .parse::<Address>()
-        .expect("Invalid Contract Address");
-
-    let provider = Provider::<Ws>::connect(&provider)
-        .await
-        .expect("Invalid RPC URL");
-
-    let wallet: LocalWallet = key.parse::<LocalWallet>().expect("Invalid private key");
-    let client = SignerMiddleware::new_with_provider_chain(provider, wallet)
-        .await
-        .unwrap();
+pub async fn serve(
+    provider: String,
+    nominatim_uri: String,
+    overpass_uri: String,
+    dispatcher: Address,
+    wallet: LocalWallet,
+) -> Result<()> {
+    let provider = Provider::<Ws>::connect(&provider).await?;
+    let client = SignerMiddleware::new_with_provider_chain(provider, wallet).await?;
 
     let c = Arc::new(client.clone());
     let events = AelocDispatcher::new(dispatcher, c).events();
-    let mut stream = events.stream().await.unwrap();
+    let mut stream = events.stream().await?;
 
     while let Some(Ok(event)) = stream.next().await {
         let tx;
         let client = Arc::new(client.clone());
         match event {
             AelocDispatcherEvents::GeocodeFilter(e) => {
-                let (caller, data) = geocode_handler(&e).await;
+                let (caller, data) = geocode_handler(&e, nominatim_uri.clone()).await?;
                 let instance = AelocDispatcher::new(caller, client);
                 tx = instance.geocode_callback(data);
             }
             AelocDispatcherEvents::ReverseGeocodeFilter(e) => {
-                let (caller, data) = reverse_geocode_handler(&e).await;
+                let (caller, data) = reverse_geocode_handler(&e, nominatim_uri.clone()).await?;
                 let instance = AelocDispatcher::new(caller, client);
                 tx = instance.reverse_geocode_callback(data);
             }
             AelocDispatcherEvents::BoundingBoxFilter(e) => {
-                let (caller, data) = bounding_box_handler(&e).await;
+                let (caller, data) = bounding_box_handler(&e, overpass_uri.clone()).await?;
                 let instance = AelocDispatcher::new(caller, client);
                 tx = instance.bounding_box_callback(data);
             }
         };
-        let tx_rcpt = tx.send().await.unwrap().await.unwrap();
+        let tx_rcpt = tx.send().await?.await?;
         let tx_hash = tx_rcpt.unwrap().transaction_hash;
         info!("Dispatcher: sent transaction {}", hex::encode(tx_hash));
     }
+
+    Ok(())
 }
 
-pub async fn geocode_handler(e: &GeocodeFilter) -> (Address, U256) {
+pub async fn geocode_handler(e: &GeocodeFilter, nominatim_uri: String) -> Result<(Address, U256)> {
     info!("Entered geocode handler: {}", e);
     let c = nominatim::Config {
-        url: "https://nominatim.openstreetmap.org/search".to_string(),
+        url: format!("{}/{}", nominatim_uri, "search"),
         timeout: 25,
     };
 
-    let s = String::from_utf8(e.location.as_bytes().to_vec()).expect("Invalid location");
+    let s = String::from_utf8(e.location.as_bytes().to_vec())?;
     let g = nominatim::Geocode::new(s);
-    let resp = g.search(&c).await.expect("No search results)");
+    let resp = g.search(&c).await?;
     let top_id = U256::from_big_endian(&resp[0].osm_id.to_be_bytes());
 
     info!("Returning from geocode handler");
-    (e.caller, top_id)
+    Ok((e.caller, top_id))
 }
 
-pub async fn reverse_geocode_handler(e: &ReverseGeocodeFilter) -> (Address, U256) {
+pub async fn reverse_geocode_handler(
+    e: &ReverseGeocodeFilter,
+    nominatim_uri: String,
+) -> Result<(Address, U256)> {
     info!("Entered reverse geocode handler: {}", e);
     let c = nominatim::Config {
-        url: "https://nominatim.openstreetmap.org/reverse".to_string(),
+        url: format!("{}/{}", nominatim_uri, "reverse"),
         timeout: 25,
     };
 
@@ -84,16 +86,19 @@ pub async fn reverse_geocode_handler(e: &ReverseGeocodeFilter) -> (Address, U256
         lat: e.lat.as_i64() as f64 / COORDINATE_MULTIPLIER,
         lon: e.lon.as_i64() as f64 / COORDINATE_MULTIPLIER,
     };
-    let resp = g.search(&c).await.expect("No search results)");
+    let resp = g.search(&c).await?;
 
     let top_id = U256::from_big_endian(&resp.osm_id.to_be_bytes());
-    (e.caller, top_id)
+    Ok((e.caller, top_id))
 }
 
-pub async fn bounding_box_handler(e: &BoundingBoxFilter) -> (Address, Vec<U256>) {
+pub async fn bounding_box_handler(
+    e: &BoundingBoxFilter,
+    overpass_uri: String,
+) -> Result<(Address, Vec<U256>)> {
     info!("Entered bounding box handler: {}", e);
     let c = overpass::Config {
-        url: "https://overpass-api.de/api/interpreter",
+        url: &overpass_uri,
         timeout: 25,
         key: &e.key.to_string(),
         val: &e.val.to_string(),
@@ -106,12 +111,12 @@ pub async fn bounding_box_handler(e: &BoundingBoxFilter) -> (Address, Vec<U256>)
         ymax: e.ymax.as_i64() as f64 / COORDINATE_MULTIPLIER,
     };
 
-    let resp = b.search(&c).await.unwrap();
+    let resp = b.search(&c).await?;
     let r: Vec<U256> = resp
         .elements
         .iter()
         .take(e.limit.as_u64() as usize)
         .map(|i| U256::from(i.id))
         .collect();
-    (e.caller, r)
+    Ok((e.caller, r))
 }
