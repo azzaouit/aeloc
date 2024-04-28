@@ -1,0 +1,24 @@
+{
+  "name": "@aeloc/contracts",
+  "version": "2.0.0",
+  "description": "Aeloc Smart Contracts",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/azzaouit/aeloc.git"
+  },
+  "keywords": [
+    "blockchain",
+    "smart contract",
+    "gis"
+  ],
+  "author": "aeloc",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/azzaouit/aeloc/issues"
+  },
+  "homepage": "https://github.com/azzaouit/aeloc#readme"
+}

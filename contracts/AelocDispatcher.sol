@@ -24,7 +24,7 @@ contract AelocDispatcher {
         address caller
     );
 
-    function _boundingBox(
+    function _bounding_box(
         int256 xmin,
         int256 ymin,
         int256 xmax,
@@ -32,16 +32,16 @@ contract AelocDispatcher {
         string memory key,
         string memory val,
         int256 limit
-    ) public  {
-        emit BoundingBox(xmin, ymin, xmax, ymax, key, val, limit, address(this));
+    ) public virtual {
+        emit BoundingBox(xmin, ymin, xmax, ymax, key, val, limit, address(msg.sender));
     }
 
-    function _geocode(string calldata location) public {
-        emit Geocode(location, address(this));
+    function _geocode(string memory location) public virtual {
+        emit Geocode(location, address(msg.sender));
     }
 
-    function _reverse_geocode(int256 lat, int256 lon) public {
-        emit ReverseGeocode(lat, lon, address(this));
+    function _reverse_geocode(int256 lat, int256 lon) public virtual {
+        emit ReverseGeocode(lat, lon, address(msg.sender));
     }
 
     function _geocode_callback(uint256 node) public virtual {}

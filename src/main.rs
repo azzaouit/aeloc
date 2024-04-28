@@ -28,7 +28,7 @@ enum Commands {
             short,
             long,
             env,
-            default_value = "https://overpass-api.de/api/interpreter"
+            default_value = "https://nominatim.openstreetmap.org"
         )]
         nominatim_uri: String,
 
@@ -36,7 +36,7 @@ enum Commands {
             short,
             long,
             env,
-            default_value = "https://nominatim.openstreetmap.org"
+            default_value = "https://overpass-api.de/api/interpreter"
         )]
         overpass_uri: String,
     },

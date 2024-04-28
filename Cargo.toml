@@ -1,8 +1,9 @@
 [package]
 name = "aeloc"
 description = "A spatial data oracle for the EVM"
+homepage = "https://aeloc.org"
 repository = "https://github.com/azzaouit/aeloc"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 license = "MIT"
 keywords = ["gis", "maps", "openstreetmaps"]

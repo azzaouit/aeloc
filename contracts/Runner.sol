@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.7;
 
-import {AelocDispatcher} from "./Dispatcher.sol";
+import {AelocRunner} from "./AelocRunner.sol";
 
-contract Runner is AelocDispatcher {
+contract Runner is AelocRunner {
     uint256 public _geocode_node;
     uint256 public _reverse_geocode_node;
     uint256[5] public _bounding_box_nodes;
+
+    constructor(address dispatcher) AelocRunner(dispatcher){}
 
     function _geocode_callback(uint256 node) public override {
         _geocode_node = node;

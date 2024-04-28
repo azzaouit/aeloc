@@ -19,7 +19,7 @@ impl KeyStore {
     pub fn create(password: &String) -> Result<Self, WalletError> {
         let ks_dir = Self::ks_dir();
         let ks_path = ks_dir.join(KS_NAME).into_os_string().into_string().unwrap();
-        let _ = std::fs::create_dir(ks_dir);
+        let _ = std::fs::create_dir_all(ks_dir);
         let (wallet, _) =
             LocalWallet::new_keystore(&ks_path, &mut thread_rng(), password, Some(&ks_path))?;
         let addr = hex::encode(wallet.address());

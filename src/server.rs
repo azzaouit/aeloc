@@ -29,28 +29,32 @@ pub async fn serve(
     let mut stream = events.stream().await?;
 
     while let Some(Ok(event)) = stream.next().await {
-        let tx;
         let client = Arc::new(client.clone());
-        match event {
-            AelocDispatcherEvents::GeocodeFilter(e) => {
-                let (caller, data) = geocode_handler(&e, nominatim_uri.clone()).await?;
-                let instance = AelocDispatcher::new(caller, client);
-                tx = instance.geocode_callback(data);
-            }
-            AelocDispatcherEvents::ReverseGeocodeFilter(e) => {
-                let (caller, data) = reverse_geocode_handler(&e, nominatim_uri.clone()).await?;
-                let instance = AelocDispatcher::new(caller, client);
-                tx = instance.reverse_geocode_callback(data);
-            }
-            AelocDispatcherEvents::BoundingBoxFilter(e) => {
-                let (caller, data) = bounding_box_handler(&e, overpass_uri.clone()).await?;
-                let instance = AelocDispatcher::new(caller, client);
-                tx = instance.bounding_box_callback(data);
-            }
-        };
-        let tx_rcpt = tx.send().await?.await?;
-        let tx_hash = tx_rcpt.unwrap().transaction_hash;
-        info!("Dispatcher: sent transaction {}", hex::encode(tx_hash));
+        let overpass_uri = overpass_uri.clone();
+        let nominatim_uri = nominatim_uri.clone();
+        tokio::spawn(async move {
+            let tx;
+            match event {
+                AelocDispatcherEvents::GeocodeFilter(e) => {
+                    let (caller, data) = geocode_handler(&e, nominatim_uri).await.unwrap();
+                    let instance = AelocDispatcher::new(caller, client);
+                    tx = instance.geocode_callback(data);
+                }
+                AelocDispatcherEvents::ReverseGeocodeFilter(e) => {
+                    let (caller, data) = reverse_geocode_handler(&e, nominatim_uri).await.unwrap();
+                    let instance = AelocDispatcher::new(caller, client);
+                    tx = instance.reverse_geocode_callback(data);
+                }
+                AelocDispatcherEvents::BoundingBoxFilter(e) => {
+                    let (caller, data) = bounding_box_handler(&e, overpass_uri).await.unwrap();
+                    let instance = AelocDispatcher::new(caller, client);
+                    tx = instance.bounding_box_callback(data);
+                }
+            };
+            let tx_rcpt = tx.send().await.unwrap().await.unwrap();
+            let tx_hash = tx_rcpt.unwrap().transaction_hash;
+            info!("Dispatcher: sent transaction {}", hex::encode(tx_hash));
+        });
     }
 
     Ok(())
