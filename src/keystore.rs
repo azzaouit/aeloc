@@ -35,12 +35,4 @@ impl KeyStore {
         info!("Opened wallet address {}", addr);
         Ok(Self { wallet })
     }
-
-    pub fn open_or_create(password: &String) -> Result<Self, WalletError> {
-        let w = Self::open(password);
-        if w.is_ok() {
-            return w;
-        }
-        Self::create(password)
-    }
 }

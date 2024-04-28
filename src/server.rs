@@ -1,4 +1,3 @@
-use crate::{nominatim, overpass};
 use ethers::prelude::*;
 use ethers::{
     core::types::{Address, U256},
@@ -7,6 +6,7 @@ use ethers::{
 use eyre::Result;
 use hex;
 use log::info;
+use osm_rs::{nominatim, overpass};
 use std::sync::Arc;
 
 /// Coordinate multiplier
@@ -98,10 +98,10 @@ pub async fn bounding_box_handler(
 ) -> Result<(Address, Vec<U256>)> {
     info!("Entered bounding box handler: {}", e);
     let c = overpass::Config {
-        url: &overpass_uri,
+        url: overpass_uri,
         timeout: 25,
-        key: &e.key.to_string(),
-        val: &e.val.to_string(),
+        key: e.key.to_string(),
+        val: e.val.to_string(),
     };
 
     let b = overpass::BoundingBox {

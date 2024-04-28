@@ -1,6 +1,12 @@
-use aeloc::{db::DbManager, keystore::KeyStore, server};
+mod db;
+mod keystore;
+mod server;
+
 use clap::{Parser, Subcommand};
+
+use db::DbManager;
 use ethers::core::types::Address;
+use keystore::KeyStore;
 use log::info;
 use std::env;
 use tokio::task::JoinSet;
