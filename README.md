@@ -2,6 +2,14 @@
 
 A spatial data oracle for the EVM
 
+## Installation
+
+To install the latest version
+
+```bash
+cargo install aeloc
+```
+
 ## System Requirements
 
 At least 4GB RAM is recommended. Lite nodes should be able to run on a Raspberry pi.

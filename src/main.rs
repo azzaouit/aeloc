@@ -18,10 +18,20 @@ enum Commands {
         #[clap(short, long, env)]
         wss_uri: String,
 
-        #[clap(short, long, env)]
+        #[clap(
+            short,
+            long,
+            env,
+            default_value = "https://overpass-api.de/api/interpreter"
+        )]
         nominatim_uri: String,
 
-        #[clap(short, long, env)]
+        #[clap(
+            short,
+            long,
+            env,
+            default_value = "https://nominatim.openstreetmap.org"
+        )]
         overpass_uri: String,
     },
     Auth {
@@ -37,11 +47,11 @@ enum Commands {
 #[derive(Subcommand, Clone)]
 enum AuthCommands {
     List,
-    New {
+    Add {
         #[clap(value_name = "CONTRACT")]
         contract: String,
     },
-    Remove {
+    Rm {
         #[clap(value_name = "CONTRACT")]
         contract: String,
     },
@@ -96,7 +106,7 @@ async fn main() {
             }
         }
         Commands::Auth { cmd } => match cmd {
-            AuthCommands::New { contract } => {
+            AuthCommands::Add { contract } => {
                 let a = contract
                     .parse::<Address>()
                     .expect("Invalid contract address");
@@ -105,7 +115,7 @@ async fn main() {
                     .await
                     .expect("Contract authorization error");
             }
-            AuthCommands::Remove { contract } => {
+            AuthCommands::Rm { contract } => {
                 let a = contract
                     .parse::<Address>()
                     .expect("Invalid contract address");

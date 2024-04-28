@@ -1,22 +1,31 @@
+use dirs::config_dir;
 use ethers::core::types::Address;
 use hex;
 use log::info;
 use sqlx::{migrate::MigrateDatabase, Row, Sqlite, SqlitePool};
+use std::path::PathBuf;
+
+const DB_NAME: &str = "aeloc.db";
 
 pub struct DbManager {
     db: SqlitePool,
 }
 
-const DB_URL: &str = "sqlite://.aeloc.db";
-
 impl DbManager {
+    pub fn db_dir() -> PathBuf {
+        config_dir().unwrap().join("aeloc")
+    }
+
     pub async fn new() -> Result<Self, sqlx::Error> {
-        if !Sqlite::database_exists(DB_URL).await.unwrap_or(false) {
-            info!("Creating database {}", DB_URL);
-            Sqlite::create_database(DB_URL).await?;
+        let db_dir = Self::db_dir();
+        let db_path = db_dir.join(DB_NAME).into_os_string().into_string().unwrap();
+
+        if !Sqlite::database_exists(&db_path).await.unwrap_or(false) {
+            let _ = std::fs::create_dir(db_dir);
+            Sqlite::create_database(&db_path).await?;
         }
 
-        let db = SqlitePool::connect(DB_URL).await?;
+        let db = SqlitePool::connect(&db_path).await?;
         sqlx::query("CREATE TABLE IF NOT EXISTS authorized (id INTEGER PRIMARY KEY, address VARCHAR(64) UNIQUE);")
             .execute(&db)
             .await?;
