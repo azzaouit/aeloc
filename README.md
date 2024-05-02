@@ -2,12 +2,6 @@
 
 A spatial data oracle for the EVM
 
-## Project Status
-
-Aeloc is live on the Sepolia testnet. Open an [issue](https://github.com/azzaouit/aeloc/issues) to report a bug or request a feature.
-
-- dispatcher: 0x775ca67487BD218df9f520BBA933536cE4F36a5b
-
 ## Data Feeds
 
 - [x] Geocoding
@@ -40,7 +34,7 @@ Geocoding maps a description like "New York" or "London" to a point in space.
 Use this feed to convert an address into a coordinate pair.
         
 ```solidity
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: GPL-3.0-only
 pragma solidity ^0.8.7;
 
 import {AelocRunner} from "@aeloc/contracts/AelocRunner.sol";
@@ -67,7 +61,7 @@ contract Runner is AelocRunner {
  Note that all decimal values are scaled by $10^8$ and represented as integers.
 
 ```solidity
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: GPL-3.0-only
 pragma solidity ^0.8.7;
 
 import {AelocRunner} from "@aeloc/contracts/AelocRunner.sol";
@@ -93,7 +87,7 @@ Search for points within a bounding box.
 Use [bboxfinder](http://bboxfinder.com/#40.776620,-73.988400,40.805000,-73.972300) to draw bounding boxes.
 
 ```solidity
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: GPL-3.0-only
 pragma solidity ^0.8.7;
 
 import {AelocRunner} from "@aeloc/contracts/AelocRunner.sol";
